@@ -1,0 +1,14 @@
+{
+  "name": "TERRAVENTURE",
+  "short_name": "TERRAVENTURE",
+  "description": "Offline-first outdoor adventure companion",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1f1f1f",
+  "theme_color": "#1a2e1a",
+  "icons": [{
+    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%231a2e1a'/%3E%3Ctext x='96' y='120' text-anchor='middle' font-size='100' fill='%232E7D32'%3E%E2%9B%B0%3C/text%3E%3C/svg%3E",
+    "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable"
+  }]
+}

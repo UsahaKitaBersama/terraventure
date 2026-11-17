@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1a2e1a">
+<title>TERRAVENTURE</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--green:#2E7D32;--dark:#1a2e1a;--charcoal:#2c2c2c;--surface:#1f1f1f;--text:#e0e0e0;--dim:#a0a0a0;--warn:#ff9800;--danger:#f44336}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--surface);color:var(--text);overflow:hidden;height:100vh;height:100dvh}
+#header{background:var(--dark);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;height:56px;border-bottom:1px solid #333}
+#header h1{font-size:17px;letter-spacing:1px}
+#header small{font-size:11px;opacity:.7;display:block;margin-top:2px}
+#main{position:absolute;top:56px;bottom:64px;left:0;right:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.view{display:none;padding:12px}
+.view.active{display:block}
+.view.map-view{padding:0}
+#bottom-nav{position:absolute;bottom:0;left:0;right:0;height:64px;background:var(--dark);border-top:1px solid #333;display:flex;justify-content:space-around;align-items:center}
+.nav-btn{background:none;border:none;color:var(--dim);display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;padding:6px 2px;cursor:pointer;flex:1;min-width:0}
+.nav-btn.active{color:var(--green)}
+.nav-btn .icon{font-size:19px}
+.btn{background:var(--green);color:#fff;border:none;padding:10px 16px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;margin:4px 0;display:inline-flex;align-items:center;gap:6px}
+.btn.danger{background:var(--danger)}
+.btn.secondary{background:var(--charcoal)}
+.btn.block{width:100%;justify-content:center}
+.card{background:var(--charcoal);border-radius:8px;padding:12px;margin-bottom:8px}
+.card .title{font-weight:600;margin-bottom:4px}
+.card .meta{font-size:12px;color:var(--dim)}
+input,textarea,select{width:100%;padding:10px;margin:4px 0;background:#1a1a1a;border:1px solid #333;color:var(--text);border-radius:4px;font-size:14px;font-family:inherit}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.stat{background:var(--charcoal);padding:12px;border-radius:8px;text-align:center}
+.stat .value{font-size:20px;font-weight:700;color:var(--green)}
+.stat .lbl{font-size:11px;color:var(--dim);margin-top:4px}
+.empty{text-align:center;color:var(--dim);padding:40px 20px;font-style:italic}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--charcoal);color:var(--text);padding:12px 20px;border-radius:6px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;font-size:13px;max-width:90%;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+#toast.show{opacity:1}
+#map{height:calc(100vh - 56px - 64px - 280px);height:calc(100dvh - 56px - 64px - 280px);width:100%}
+#gps-card{background:var(--charcoal);padding:10px;margin:8px;border-radius:8px;border-left:4px solid var(--green);font-size:13px}
+#gps-card .row{display:flex;justify-content:space-between;padding:2px 0}
+#gps-card .lbl{color:var(--dim)}
+.acc-warn{color:var(--warn);font-weight:600}
+#gps-status{font-size:11px;color:var(--dim);padding:6px 12px;margin:0 8px;background:#1a1a1a;border-radius:4px}
+.rec-controls{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:6px;z-index:500;flex-wrap:wrap}
+.rec-controls button{flex:1;padding:12px;font-size:13px;font-weight:600;border:none;border-radius:6px;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.rec-controls .start{background:var(--green)}
+.rec-controls .stop{background:var(--danger)}
+.rec-controls .pause{background:var(--warn)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.photo-item{background:var(--charcoal);border-radius:6px;overflow:hidden;position:relative}
+.photo-item img{width:100%;display:block;aspect-ratio:1;object-fit:cover}
+.photo-item .info{position:absolute;bottom:0;left:0;right:0;padding:4px 6px;font-size:10px;background:linear-gradient(transparent,rgba(0,0,0,.85));color:#fff}
+.seg{display:flex;gap:6px;margin:8px 0}
+.seg button{flex:1;padding:8px;font-size:12px;background:var(--charcoal);border:1px solid #444;color:var(--text);border-radius:4px;cursor:pointer}
+.seg button.active{background:var(--green);border-color:var(--green)}
+.flex{display:flex;gap:6px;flex-wrap:wrap}
+h2{font-size:16px;margin-bottom:12px;color:#fff}
+h3{font-size:14px;margin:12px 0 8px;color:var(--green)}
+</style>
+</head>
+<body>
+<header id="header">
+  <div><h1>🏔 TERRAVENTURE</h1><small id="hdr-status">Offline-first outdoor companion</small></div>
+  <button class="btn secondary" style="padding:6px 10px;font-size:12px" onclick="showView('settings')">⚙</button>
+</header>
+
+<main id="main">
+  <section id="view-home" class="view active">
+    <h2>Dashboard</h2>
+    <div class="stats">
+      <div class="stat"><div class="value" id="home-total-tracks">0</div><div class="lbl">Track</div></div>
+      <div class="stat"><div class="value" id="home-total-distance">0 km</div><div class="lbl">Total Jarak</div></div>
+      <div class="stat"><div class="value" id="home-total-time">0 j</div><div class="lbl">Total Waktu</div></div>
+      <div class="stat"><div class="value" id="home-total-trips">0</div><div class="lbl">Trip</div></div>
+    </div>
+    <div class="card"><div class="title">📍 Status GPS</div><div class="meta" id="home-gps-msg">Memeriksa...</div></div>
+    <div class="grid-2">
+      <button class="btn block" onclick="showView('map')">🗺 Peta</button>
+      <button class="btn block" onclick="showView('record')">⏺ Rekam</button>
+    </div>
+  </section>
+
+  <section id="view-map" class="view map-view">
+    <div style="position:relative">
+      <div id="map"></div>
+      <div class="rec-controls" id="rec-controls"><button class="start" onclick="startRec()">▶ Mulai Rekam</button></div>
+      <div class="rec-controls" id="rec-active-controls" style="display:none">
+        <button class="pause" id="btn-pause" onclick="togglePause()">⏸ Pause</button>
+        <button class="stop" onclick="stopRec()">⏹ Stop</button>
+      </div>
+    </div>
+    <div id="gps-card">
+      <div class="row"><span class="lbl">Latitude</span><span id="gps-lat">--</span></div>
+      <div class="row"><span class="lbl">Longitude</span><span id="gps-lon">--</span></div>
+      <div class="row"><span class="lbl">Altitud</span><span id="gps-alt">--</span></div>
+      <div class="row"><span class="lbl">Akurasi</span><span id="gps-acc">--</span></div>
+      <div class="row"><span class="lbl">Kompas</span><span id="gps-comp">--</span></div>
+    </div>
+    <div id="gps-status">GPS belum aktif</div>
+    <div style="padding:8px">
+      <button class="btn block" onclick="startGps()">📡 Aktifkan GPS</button>
+      <button class="btn block secondary" onclick="quickWaypoint()">📍 Simpan Lokasi Ini</button>
+    </div>
+  </section>
+
+  <section id="view-record" class="view">
+    <h2>Perekaman</h2>
+    <div class="card">
+      <div class="title">Status: <span id="rec-status">Tidak aktif</span></div>
+      <div class="stats">
+        <div class="stat"><div class="value" id="rec-distance">0 m</div><div class="lbl">Jarak</div></div>
+        <div class="stat"><div class="value" id="rec-time">00:00:00</div><div class="lbl">Waktu</div></div>
+        <div class="stat"><div class="value" id="rec-speed">0 km/j</div><div class="lbl">Rata-rata</div></div>
+        <div class="stat"><div class="value" id="rec-points">0</div><div class="lbl">Titik</div></div>
+      </div>
+      <div id="rec-buttons"><button class="btn block" onclick="startRec()">▶ Mulai Rekam</button></div>
+    </div>
+    <h3>Riwayat Track</h3>
+    <div id="track-list"></div>
+  </section>
+
+  <section id="view-trips" class="view">
+    <h2>Rencana Perjalanan</h2>
+    <button class="btn block" onclick="newTrip()">+ Trip Baru</button>
+    <div id="trip-list" style="margin-top:8px"></div>
+  </section>
+
+  <section id="view-gear" class="view">
+    <h2>Perlengkapan</h2>
+    <div class="card">
+      <div class="title">Tambah Item</div>
+      <input id="gear-name" placeholder="Nama item">
+      <select id="gear-cat">
+        <option value="shelter">Shelter</option><option value="cooking">Memasak</option>
+        <option value="clothing">Pakaian</option><option value="navigation">Navigasi</option>
+        <option value="safety">Keselamatan</option><option value="food">Makanan</option>
+        <option value="water">Air</option><option value="other">Lainnya</option>
+      </select>
+      <div class="grid-2">
+        <input id="gear-weight" type="number" placeholder="Berat (g)">
+        <input id="gear-qty" type="number" placeholder="Jumlah" value="1">
+      </div>
+      <button class="btn block" onclick="addGear()">+ Tambah</button>
+    </div>
+    <div class="card"><div class="title">Total Berat: <span id="gear-total" style="color:var(--green)">0 g</span></div></div>
+    <div id="gear-list"></div>
+  </section>
+
+  <section id="view-history" class="view">
+    <h2>Riwayat Perjalanan</h2>
+    <div class="seg">
+      <button class="active" onclick="histTab('tracks', this)">Track</button>
+      <button onclick="histTab('trips', this)">Trip</button>
+      <button onclick="histTab('photos', this)">Foto</button>
+    </div>
+    <button class="btn block" onclick="takePhoto()">📷 Ambil Foto</button>
+    <div id="history-content" style="margin-top:8px"></div>
+  </section>
+
+  <section id="view-settings" class="view">
+    <h2>Pengaturan</h2>
+    <div class="card">
+      <div class="title">Data & Backup</div>
+      <button class="btn block secondary" onclick="exportAllGPX()">📥 Ekspor Semua Track (GPX)</button>
+      <button class="btn block secondary" onclick="exportBackup()">💾 Backup JSON</button>
+      <button class="btn block secondary" onclick="importGPXFile()">📤 Impor GPX</button>
+      <input type="file" id="gpx-input" accept=".gpx" style="display:none" onchange="onImportGPX(event)">
+      <button class="btn block danger" onclick="clearAll()">🗑 Hapus Semua Data</button>
+    </div>
+    <div class="card"><div class="title">Tentang</div><div class="meta" style="line-height:1.8">
+      TERRAVENTURE v1.0<br>Data lokal. Peta © OpenStreetMap (ODbL).<br>
+      <b>⚠ Peringatan:</b> Rute belum diverifikasi. Jangan andalkan untuk navigasi kritis.
+    </div></div>
+  </section>
+</main>
+
+<nav id="bottom-nav">
+  <button class="nav-btn active" data-view="home" onclick="showView('home')"><span class="icon">🏠</span><span>Home</span></button>
+  <button class="nav-btn" data-view="map" onclick="showView('map')"><span class="icon">🗺</span><span>Peta</span></button>
+  <button class="nav-btn" data-view="record" onclick="showView('record')"><span class="icon">⏺</span><span>Rekam</span></button>
+  <button class="nav-btn" data-view="trips" onclick="showView('trips')"><span class="icon">📋</span><span>Trip</span></button>
+  <button class="nav-btn" data-view="gear" onclick="showView('gear')"><span class="icon">🎒</span><span>Gear</span></button>
+  <button class="nav-btn" data-view="history" onclick="showView('history')"><span class="icon">📜</span><span>Riwayat</span></button>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));
+function haversine(a,b,c,d){const R=6371000,p1=a*Math.PI/180,p2=c*Math.PI/180,dp=(c-a)*Math.PI/180,dl=(d-b)*Math.PI/180,x=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+function fmtDist(m){return m<1000?Math.round(m)+' m':(m/1000).toFixed(2)+' km';}
+function fmtDur(s){s=Math.max(0,Math.floor(s));const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}`;}
+function fmtDate(d){try{return new Date(d).toLocaleString('id-ID');}catch(e){return String(d);}}
+function fmtDateShort(d){try{return new Date(d).toLocaleDateString('id-ID');}catch(e){return String(d);}}
+function dl(name,content,mime){const b=new Blob([content],{type:mime});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(u);},1000);}
+function toast(m,ms){ms=ms||2500;const el=$('toast');el.textContent=m;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),ms);}
+
+const DB = {
+  _db:null,
+  async init(){return new Promise((res,rej)=>{const r=indexedDB.open('terraventure',1);r.onupgradeneeded=e=>{const db=e.target.result;['tracks','trips','equipment','photos'].forEach(s=>{if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id',autoIncrement:true});});};r.onsuccess=e=>{this._db=e.target.result;res();};r.onerror=e=>rej(e);});},
+  async add(s,d){return new Promise((r,j)=>{const q=this._db.transaction(s,'readwrite').objectStore(s).add(d);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);});},
+  async put(s,d){return new Promise((r,j)=>{const q=this._db.transaction(s,'readwrite').objectStore(s).put(d);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);});},
+  async get(s,id){return new Promise((r,j)=>{const q=this._db.transaction(s,'readonly').objectStore(s).get(id);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);});},
+  async getAll(s){return new Promise((r,j)=>{const q=this._db.transaction(s,'readonly').objectStore(s).getAll();q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);});},
+  async del(s,id){return new Promise((r,j)=>{const q=this._db.transaction(s,'readwrite').objectStore(s).delete(id);q.onsuccess=()=>r();q.onerror=()=>j(q.error);});},
+  async clear(s){return new Promise((r,j)=>{const q=this._db.transaction(s,'readwrite').objectStore(s).clear();q.onsuccess=()=>r();q.onerror=()=>j(q.error);});}
+};
+
+const IS_NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const state = {view:'home',map:null,gpsMarker:null,currentPolyline:null,lastPos:null,recording:false,paused:false,currentTrack:null,startTime:0,pausedDuration:0,pauseStartTime:0,timerInterval:null,gpsNativeWatcherId:null,gpsBrowserWatchId:null,backgroundActive:false,historyTab:'tracks',deviationWarned:false,lastDeviationCheck:0};
+
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const v=$('view-'+name);if(v)v.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
+  state.view=name;
+  if(name==='map'&&state.map)setTimeout(()=>state.map.invalidateSize(),150);
+  if(name==='home')renderHome();
+  if(name==='record')renderTrackList();
+  if(name==='trips')renderTripList();
+  if(name==='gear')renderGearList();
+  if(name==='history')renderHistory();
+}
+
+async function startGps(){
+  if(state.backgroundActive||state.gpsBrowserWatchId){toast('GPS sudah aktif');return;}
+  if(IS_NATIVE && window.Capacitor.Plugins && window.Capacitor.Plugins.BackgroundGeolocation){
+    try{
+      const plugin=window.Capacitor.Plugins.BackgroundGeolocation;
+      state.gpsNativeWatcherId=await plugin.addWatcher({backgroundMessage:'TERRAVENTURE merekam perjalanan Anda',backgroundTitle:'GPS aktif',requestPermissions:true,stale:false,distanceFilter:3},(pos,err)=>{if(err){console.error(err);return;}if(pos)onLocationUpdate({latitude:pos.latitude,longitude:pos.longitude,altitude:pos.altitude,accuracy:pos.accuracy,speed:pos.speed,bearing:pos.bearing});});
+      state.backgroundActive=true;$('gps-status').textContent='🟢 GPS background aktif — tetap merekam saat layar mati';
+      toast('GPS background aktif! Tetap merekam saat layar mati.',4000);return;
+    }catch(e){console.error(e);toast('Gagal aktivasi GPS background, fallback ke browser');}
+  }
+  if(!navigator.geolocation){toast('Geolocation tidak didukung');return;}
+  state.gpsBrowserWatchId=navigator.geolocation.watchPosition(pos=>onLocationUpdate({latitude:pos.coords.latitude,longitude:pos.coords.longitude,altitude:pos.coords.altitude,accuracy:pos.coords.accuracy,speed:pos.coords.speed,bearing:pos.coords.heading}),err=>console.error(err),{enableHighAccuracy:true,maximumAge:2000,timeout:15000});
+  $('gps-status').textContent='🟡 GPS foreground — layar harus menyala';
+}
+
+function onLocationUpdate(p){
+  state.lastPos=p;
+  $('gps-lat').textContent=p.latitude.toFixed(6);
+  $('gps-lon').textContent=p.longitude.toFixed(6);
+  $('gps-alt').textContent=p.altitude!=null?p.altitude.toFixed(0)+' m':'N/A';
+  const acc=Math.round(p.accuracy||0);
+  $('gps-acc').textContent=acc+' m';
+  $('gps-acc').className=acc>30?'acc-warn':'';
+  if(p.bearing!=null)$('gps-comp').textContent=Math.round(p.bearing)+'°';
+  if(state.map){if(!state.gpsMarker){state.gpsMarker=L.marker([p.latitude,p.longitude]).addTo(state.map);state.map.setView([p.latitude,p.longitude],15);}else state.gpsMarker.setLatLng([p.latitude,p.longitude]);}
+  if(state.recording&&!state.paused&&state.currentTrack){
+    const pts=state.currentTrack.points;const last=pts[pts.length-1];let add=true;
+    if(last){const d=haversine(last.lat,last.lon,p.latitude,p.longitude);if(d<2)add=false;else state.currentTrack.distance+=d;}
+    if(add){pts.push({lat:p.latitude,lon:p.longitude,alt:p.altitude,acc:p.accuracy,t:Date.now()});if(state.currentPolyline&&state.map)state.currentPolyline.setLatLngs(pts.map(q=>[q.lat,q.lon]));updateRecStats();}
+  }
+  const now=Date.now();if(now-state.lastDeviationCheck>30000){state.lastDeviationCheck=now;checkDeviation(p);}
+}
+
+async function checkDeviation(p){
+  const trips=await DB.getAll('trips');if(!trips.length)return;
+  const trip=trips.sort((a,b)=>b.id-a.id).find(t=>t.waypoints&&t.waypoints.length>=2);if(!trip)return;
+  let minDist=Infinity;const wps=trip.waypoints;
+  for(let i=0;i<wps.length-1;i++){
+    const a=wps[i],b=wps[i+1];const R=111320,cosLat=Math.cos(p.latitude*Math.PI/180);
+    const ax=a.lon*R*cosLat,ay=a.lat*R,bx=b.lon*R*cosLat,by=b.lat*R,px=p.longitude*R*cosLat,py=p.latitude*R;
+    const dx=bx-ax,dy=by-ay;const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/(dx*dx+dy*dy||1)));
+    const px2=ax+t*dx,py2=ay+t*dy;const d=Math.sqrt((px-px2)**2+(py-py2)**2);if(d<minDist)minDist=d;
+  }
+  if(minDist>200&&!state.deviationWarned){state.deviationWarned=true;toast(`⚠ Anda ${Math.round(minDist)} m dari rute "${trip.name}". Periksa posisi.`,5000);}
+  else if(minDist<100)state.deviationWarned=false;
+}
+
+function initCompass(){
+  const h=e=>{let v=null;if(e.webkitCompassHeading!=null)v=e.webkitCompassHeading;else if(e.alpha!=null)v=(360-e.alpha)%360;if(v!=null&&(!state.lastPos||!state.lastPos.bearing))$('gps-comp').textContent=Math.round(v)+'°';};
+  window.addEventListener('deviceorientationabsolute',h,true);window.addEventListener('deviceorientation',h,true);
+}
+
+function initMap(){
+  state.map=L.map('map',{zoomControl:true}).setView([-6.2,106.8],12);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(state.map);
+  state.currentPolyline=L.polyline([],{color:'#2E7D32',weight:4}).addTo(state.map);
+}
+
+function startRec(){
+  if(!state.lastPos){toast('Tunggu GPS fix dulu');return;}
+  if(state.recording){toast('Sudah merekam');return;}
+  state.currentTrack={name:'Track '+new Date().toLocaleString('id-ID'),startedAt:new Date().toISOString(),points:[{lat:state.lastPos.latitude,lon:state.lastPos.longitude,alt:state.lastPos.altitude,t:Date.now()}],distance:0};
+  state.recording=true;state.paused=false;state.startTime=Date.now();state.pausedDuration=0;
+  if(state.currentPolyline)state.currentPolyline.setLatLngs([]);
+  $('rec-controls').style.display='none';$('rec-active-controls').style.display='flex';
+  $('rec-status').textContent='🔴 Merekam';$('btn-pause').textContent='⏸ Pause';
+  $('rec-buttons').innerHTML='<button class="btn block danger" onclick="stopRec()">⏹ Stop & Simpan</button><button class="btn block secondary" onclick="togglePause()">⏸ Pause</button>';
+  state.timerInterval=setInterval(updateRecStats,1000);updateRecStats();toast('Mulai merekam');
+}
+
+function togglePause(){
+  if(!state.recording)return;
+  if(!state.paused){state.paused=true;state.pauseStartTime=Date.now();$('rec-status').textContent='⏸ Dijeda';$('btn-pause').textContent='▶ Lanjut';toast('Dijeda');}
+  else{state.paused=false;state.pausedDuration+=Date.now()-state.pauseStartTime;$('rec-status').textContent='🔴 Merekam';$('btn-pause').textContent='⏸ Pause';toast('Dilanjutkan');}
+}
+
+async function stopRec(){
+  if(!state.recording)return;
+  clearInterval(state.timerInterval);state.recording=false;state.paused=false;
+  if(state.currentTrack.points.length<2){toast('Track terlalu pendek');}
+  else{state.currentTrack.endedAt=new Date().toISOString();state.currentTrack.elapsedSec=Math.floor((Date.now()-state.startTime-state.pausedDuration)/1000);await DB.add('tracks',state.currentTrack);toast('Tersimpan: '+state.currentTrack.name);}
+  state.currentTrack=null;$('rec-controls').style.display='flex';$('rec-active-controls').style.display='none';$('rec-status').textContent='Tidak aktif';
+  $('rec-buttons').innerHTML='<button class="btn block" onclick="startRec()">▶ Mulai Rekam</button>';
+  $('rec-distance').textContent='0 m';$('rec-time').textContent='00:00:00';$('rec-speed').textContent='0 km/j';$('rec-points').textContent='0';
+  if(state.view==='record')renderTrackList();if(state.view==='home')renderHome();
+}
+
+function updateRecStats(){
+  if(!state.currentTrack)return;const t=state.currentTrack;
+  const el=Math.floor((Date.now()-state.startTime-state.pausedDuration)/1000);
+  const v={distance:fmtDist(t.distance),time:fmtDur(el),speed:(el>0?(t.distance/1000)/(el/3600):0).toFixed(1)+' km/j',points:t.points.length};
+  Object.keys(v).forEach(k=>{const e=$('rec-'+k);if(e)e.textContent=v[k];});
+}
+
+async function renderTrackList(){
+  const tracks=await DB.getAll('tracks');tracks.sort((a,b)=>b.id-a.id);
+  const el=$('track-list');if(!el)return;
+  if(!tracks.length){el.innerHTML='<div class="empty">Belum ada track tersimpan</div>';return;}
+  el.innerHTML=tracks.map(t=>`<div class="card"><div class="title">${esc(t.name)}</div><div class="meta">${fmtDist(t.distance)} • ${fmtDur(t.elapsedSec||0)} • ${t.points.length} titik • ${fmtDateShort(t.startedAt)}</div><div class="flex" style="margin-top:8px"><button class="btn secondary" style="padding:6px 10px;font-size:12px" onclick="viewTrackOnMap(${t.id})">🗺 Peta</button><button class="btn secondary" style="padding:6px 10px;font-size:12px" onclick="exportTrackGPX(${t.id})">📥 GPX</button><button class="btn danger" style="padding:6px 10px;font-size:12px" onclick="delTrack(${t.id});renderTrackList()">🗑</button></div></div>`).join('');
+}
+
+async function viewTrackOnMap(id){const t=(await DB.getAll('tracks')).find(x=>x.id===id);if(!t)return;showView('map');setTimeout(()=>{state.currentPolyline.setLatLngs(t.points.map(p=>[p.lat,p.lon]));state.map.fitBounds(state.currentPolyline.getBounds(),{padding:[40,40]});},300);}
+async function exportTrackGPX(id){const t=(await DB.getAll('tracks')).find(x=>x.id===id);if(!t)return;dl(t.name.replace(/[^a-z0-9]/gi,'_')+'.gpx',buildGPX(t),'application/gpx+xml');toast('GPX diunduh');}
+async function delTrack(id){if(!confirm('Hapus track ini?'))return;await DB.del('tracks',id);renderTrackList();}
+function buildGPX(t){const pts=t.points.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?'<ele>'+p.alt.toFixed(1)+'</ele>':''}<time>${new Date(p.t).toISOString()}</time></trkpt>`).join('');return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="TERRAVENTURE" xmlns="http://www.topografix.com/GPX/1/1">\n<trk><name>${esc(t.name)}</name><trkseg>${pts}</trkseg></trk>\n</gpx>`;}
+
+async function renderHome(){
+  const tracks=await DB.getAll('tracks');const trips=await DB.getAll('trips');
+  const totalDist=tracks.reduce((s,t)=>s+(t.distance||0),0);const totalTime=tracks.reduce((s,t)=>s+(t.elapsedSec||0),0);
+  $('home-total-tracks').textContent=tracks.length;$('home-total-distance').textContent=fmtDist(totalDist);
+  $('home-total-time').textContent=(totalTime/3600).toFixed(1)+' j';$('home-total-trips').textContent=trips.length;
+  let msg='Belum aktif';if(state.backgroundActive)msg='🟢 GPS background aktif';else if(state.gpsBrowserWatchId)msg='🟡 GPS foreground';else if(IS_NATIVE)msg='Siap — tap "Aktifkan GPS"';else msg='Mode browser — GPS hanya saat aplikasi terbuka';
+  $('home-gps-msg').textContent=msg;
+}
+
+async function newTrip(){const name=prompt('Nama trip:');if(!name)return;const date=prompt('Tanggal rencana (YYYY-MM-DD):',new Date().toISOString().slice(0,10));const notes=prompt('Catatan:')||'';await DB.add('trips',{name,plannedStart:date||null,notes,createdAt:new Date().toISOString(),waypoints:[]});renderTripList();toast('Trip dibuat');}
+
+async function renderTripList(){
+  const trips=await DB.getAll('trips');trips.sort((a,b)=>b.id-a.id);const el=$('trip-list');if(!el)return;
+  if(!trips.length){el.innerHTML='<div class="empty">Belum ada trip</div>';return;}
+  el.innerHTML=trips.map(t=>`<div class="card"><div class="title">${esc(t.name)}</div><div class="meta">${t.plannedStart||'-'} • ${(t.waypoints||[]).length} titik</div>${t.notes?`<div class="meta">${esc(t.notes)}</div>`:''}<div class="flex" style="margin-top:8px"><button class="btn secondary" style="padding:6px 10px;font-size:12px" onclick="addWaypoint(${t.id})">📍 + Waypoint</button><button class="btn secondary" style="padding:6px 10px;font-size:12px" onclick="viewTripOnMap(${t.id})">🗺 Peta</button><button class="btn secondary" style="padding:6px 10px;font-size:12px" onclick="editTrip(${t.id})">✏</button><button class="btn secondary" style="padding:6px 10px;font-size:12px" onclick="dupTrip(${t.id})">📋</button><button class="btn danger" style="padding:6px 10px;font-size:12px" onclick="delTrip(${t.id})">🗑</button></div></div>`).join('');
+}
+
+async function addWaypoint(tripId){if(!state.lastPos){toast('Tunggu GPS fix');return;}const name=prompt('Nama waypoint:');if(!name)return;const type=prompt('Tipe (campsite/water/parking/checkpoint/fuel):','checkpoint')||'checkpoint';const t=(await DB.getAll('trips')).find(x=>x.id===tripId);if(!t)return;t.waypoints=t.waypoints||[];t.waypoints.push({name,type,lat:state.lastPos.latitude,lon:state.lastPos.longitude,alt:state.lastPos.altitude,verified:false});await DB.put('trips',t);renderTripList();toast('Waypoint ditambahkan');}
+
+async function viewTripOnMap(id){const t=(await DB.getAll('trips')).find(x=>x.id===id);if(!t||!t.waypoints||!t.waypoints.length){toast('Trip belum punya waypoint');return;}showView('map');setTimeout(()=>{const g=L.featureGroup();t.waypoints.forEach(w=>L.marker([w.lat,w.lon]).bindPopup(`<b>${esc(w.name)}</b><br>${esc(w.type)}<br><i>Belum diverifikasi</i>`).addTo(g));g.addTo(state.map);state.map.fitBounds(g.getBounds().pad(0.2));},300);}
+
+async function editTrip(id){const t=(await DB.getAll('trips')).find(x=>x.id===id);if(!t)return;const name=prompt('Nama trip:',t.name);if(!name)return;t.name=name;t.plannedStart=prompt('Tanggal:',t.plannedStart||'')||null;t.notes=prompt('Catatan:',t.notes||'')||'';await DB.put('trips',t);renderTripList();toast('Trip diupdate');}
+
+async function dupTrip(id){const t=(await DB.getAll('trips')).find(x=>x.id===id);if(!t)return;await DB.add('trips',{...t,id:undefined,name:t.name+' (copy)',createdAt:new Date().toISOString()});renderTripList();toast('Trip diduplikasi');}
+async function delTrip(id){if(!confirm('Hapus trip ini?'))return;await DB.del('trips',id);renderTripList();}
+
+async function quickWaypoint(){if(!state.lastPos){toast('Tunggu GPS fix');return;}const name=prompt('Nama lokasi:');if(!name)return;const type=prompt('Tipe (campsite/water/parking/checkpoint):','checkpoint')||'checkpoint';await DB.add('trips',{name:'📍 '+name,plannedStart:new Date().toISOString().slice(0,10),notes:'Quick waypoint ('+type+')',createdAt:new Date().toISOString(),waypoints:[{name,type,lat:state.lastPos.latitude,lon:state.lastPos.longitude,alt:state.lastPos.altitude,verified:false}]});toast('Lokasi disimpan');}
+
+async function addGear(){const name=$('gear-name').value.trim();if(!name){toast('Nama wajib');return;}const cat=$('gear-cat').value;const weight=parseFloat($('gear-weight').value)||0;const qty=parseInt($('gear-qty').value)||1;await DB.add('equipment',{name,category:cat,weight,qty,packed:false,createdAt:new Date().toISOString()});$('gear-name').value='';$('gear-weight').value='';$('gear-qty').value='1';renderGearList();toast('Item ditambahkan');}
+
+async function renderGearList(){
+  const items=await DB.getAll('equipment');const total=items.reduce((s,i)=>s+i.weight*i.qty,0);
+  $('gear-total').textContent=total>=1000?(total/1000).toFixed(2)+' kg':total+' g';
+  const el=$('gear-list');if(!el)return;if(!items.length){el.innerHTML='<div class="empty">Belum ada item</div>';return;}
+  const cats={};items.forEach(i=>{(cats[i.category]=cats[i.category]||[]).push(i);});
+  el.innerHTML=Object.keys(cats).sort().map(cat=>`<div class="card"><div class="title" style="text-transform:capitalize">${esc(cat)}</div>${cats[cat].map(i=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #333"><input type="checkbox" ${i.packed?'checked':''} onchange="togglePacked(${i.id},this.checked)" style="width:20px;height:20px"><div style="flex:1;${i.packed?'text-decoration:line-through;opacity:.6':''}"><div>${esc(i.name)}</div><div class="meta">${i.weight} g × ${i.qty}</div></div><button class="btn danger" style="padding:4px 8px;font-size:12px" onclick="delGear(${i.id})">×</button></div>`).join('')}</div>`).join('');
+}
+
+async function togglePacked(id,v){const it=(await DB.getAll('equipment')).find(x=>x.id===id);if(!it)return;it.packed=v;await DB.put('equipment',it);}
+async function delGear(id){await DB.del('equipment',id);renderGearList();}
+
+function takePhoto(){
+  if(IS_NATIVE && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera){window.Capacitor.Plugins.Camera.getPhoto({quality:85,allowEditing:false,resultType:'dataUrl',source:'CAMERA'}).then(img=>savePhoto(img.dataUrl)).catch(e=>{if(e.message&&!e.message.includes('cancel'))toast('Kamera error: '+e.message);});return;}
+  const input=document.createElement('input');input.type='file';input.accept='image/*';input.capture='environment';
+  input.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>savePhoto(r.result);r.readAsDataURL(f);};input.click();
+}
+
+async function savePhoto(dataUrl){const tripId=prompt('Simpan ke Trip ID (kosongkan jika tidak terkait):','');const note=prompt('Catatan foto:','')||'';await DB.add('photos',{dataUrl,tripId:tripId?parseInt(tripId):null,timestamp:new Date().toISOString(),lat:state.lastPos?.latitude??null,lon:state.lastPos?.longitude??null,alt:state.lastPos?.altitude??null,note});toast('Foto disimpan'+(state.lastPos?' dengan lokasi':''));if(state.view==='history')renderHistory();}
+
+async function renderPhotos(){const photos=await DB.getAll('photos');photos.sort((a,b)=>b.id-a.id);if(!photos.length)return '<div class="empty">Belum ada foto</div>';return '<div class="photo-grid">'+photos.map(p=>`<div class="photo-item"><img src="${p.dataUrl}" alt=""><div class="info">${p.lat?p.lat.toFixed(4)+','+p.lon.toFixed(4):'Tanpa lokasi'}${p.note?' • '+esc(p.note):''}</div><button class="btn danger" style="position:absolute;top:4px;right:4px;padding:2px 6px;font-size:11px;border-radius:50%" onclick="delPhoto(${p.id})">×</button></div>`).join('')+'</div>';}
+
+async function delPhoto(id){if(!confirm('Hapus foto?'))return;await DB.del('photos',id);renderHistory();}
+
+function histTab(tab,btn){state.historyTab=tab;document.querySelectorAll('#view-history .seg button').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');renderHistory();}
+
+async function renderHistory(){
+  const el=$('history-content');if(!el)return;
+  if(state.historyTab==='tracks'){const tracks=await DB.getAll('tracks');tracks.sort((a,b)=>b.id-a.id);el.innerHTML=tracks.length?tracks.map(t=>`<div class="card"><div class="title">${esc(t.name)}</div><div class="meta">${fmtDate(t.startedAt)} • ${fmtDist(t.distance)} • ${fmtDur(t.elapsedSec||0)}</div><div class="flex" style="margin-top:8px"><button class="btn secondary" style="padding:6px 10px;font-size:12px" onclick="viewTrackOnMap(${t.id})">🗺 Lihat</button><button class="btn secondary" style="padding:6px 10px;font-size:12px" onclick="exportTrackGPX(${t.id})">📥 GPX</button><button class="btn secondary" style="padding:6px 10px;font-size:12px" onclick="generatePDF(${t.id})">📄 PDF</button><button class="btn danger" style="padding:6px 10px;font-size:12px" onclick="delTrack(${t.id});renderHistory()">🗑</button></div></div>`).join(''):'<div class="empty">Belum ada track</div>';}
+  else if(state.historyTab==='trips'){const trips=await DB.getAll('trips');trips.sort((a,b)=>b.id-a.id);el.innerHTML=trips.length?trips.map(t=>`<div class="card"><div class="title">${esc(t.name)}</div><div class="meta">${t.plannedStart||'-'} • ${(t.waypoints||[]).length} waypoint</div>${t.notes?`<div class="meta">${esc(t.notes)}</div>`:''}<div class="flex" style="margin-top:8px"><button class="btn secondary" style="padding:6px 10px;font-size:12px" onclick="viewTripOnMap(${t.id})">🗺 Peta</button><button class="btn secondary" style="padding:6px 10px;font-size:12px" onclick="generateTripPDF(${t.id})">📄 PDF</button></div></div>`).join(''):'<div class="empty">Belum ada trip</div>';}
+  else if(state.historyTab==='photos'){el.innerHTML=await renderPhotos();}
+}
+
+function generatePDF(trackId){
+  DB.getAll('tracks').then(tracks=>{const t=tracks.find(x=>x.id===trackId);if(!t)return;const {jsPDF}=window.jspdf;const doc=new jsPDF();
+    doc.setFontSize(20);doc.text('TERRAVENTURE — Trip Report',20,25);doc.setFontSize(10);doc.setTextColor(100);doc.text('Dibuat: '+new Date().toLocaleString('id-ID'),20,33);
+    doc.setTextColor(0);doc.setFontSize(14);doc.text(t.name,20,50);doc.setFontSize(11);let y=62;
+    [['Tanggal',fmtDate(t.startedAt)],['Durasi',fmtDur(t.elapsedSec||0)],['Jarak',fmtDist(t.distance)],['Titik GPS',t.points.length+''],['Kecepatan rata-rata',((t.elapsedSec>0?(t.distance/1000)/(t.elapsedSec/3600):0).toFixed(1))+' km/j']].forEach(([k,v])=>{doc.text(k,20,y);doc.text(String(v),80,y);y+=8;});
+    y+=5;doc.setFontSize(10);doc.setTextColor(100);doc.text('⚠ Rute belum diverifikasi.',20,y);y+=6;doc.text('Aplikasi tidak bertanggung jawab atas kesalahan navigasi.',20,y);
+    doc.save('terraventure_report_'+(t.name.replace(/[^a-z0-9]/gi,'_')||'track')+'.pdf');toast('PDF diunduh');});
+}
+
+function generateTripPDF(tripId){
+  DB.getAll('trips').then(trips=>{const t=trips.find(x=>x.id===tripId);if(!t)return;const {jsPDF}=window.jspdf;const doc=new jsPDF();
+    doc.setFontSize(20);doc.text('TERRAVENTURE — Rencana Perjalanan',20,25);doc.setFontSize(10);doc.setTextColor(100);doc.text('Dibuat: '+new Date().toLocaleString('id-ID'),20,33);
+    doc.setTextColor(0);doc.setFontSize(14);doc.text(t.name,20,50);doc.setFontSize(11);let y=62;
+    doc.text('Tanggal: '+(t.plannedStart||'-'),20,y);y+=7;if(t.notes){doc.text('Catatan: '+t.notes,20,y);y+=7;}
+    y+=3;doc.text('Waypoints:',20,y);y+=7;
+    (t.waypoints||[]).forEach((w,i)=>{if(y>270){doc.addPage();y=20;}doc.text(`${i+1}. ${w.name} (${w.type})`,25,y);y+=6;doc.setFontSize(9);doc.text(`${w.lat.toFixed(5)}, ${w.lon.toFixed(5)} • belum diverifikasi`,30,y);y+=7;doc.setFontSize(11);});
+    doc.setFontSize(10);doc.setTextColor(100);doc.text('⚠ Semua waypoint belum diverifikasi.',20,Math.min(y+5,280));
+    doc.save('terraventure_trip_'+(t.name.replace(/[^a-z0-9]/gi,'_')||'trip')+'.pdf');toast('PDF diunduh');});
+}
+
+async function exportAllGPX(){const tracks=await DB.getAll('tracks');if(!tracks.length){toast('Belum ada track');return;}let out=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="TERRAVENTURE" xmlns="http://www.topografix.com/GPX/1/1">\n`;tracks.forEach(t=>{const pts=t.points.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?'<ele>'+p.alt.toFixed(1)+'</ele>':''}<time>${new Date(p.t).toISOString()}</time></trkpt>`).join('');out+=`<trk><name>${esc(t.name)}</name><trkseg>${pts}</trkseg></trk>\n`;});out+='</gpx>';dl('terraventure_all.gpx',out,'application/gpx+xml');toast('GPX diunduh');}
+
+async function exportBackup(){const data={exportedAt:new Date().toISOString(),tracks:await DB.getAll('tracks'),trips:await DB.getAll('trips'),equipment:await DB.getAll('equipment'),photos:(await DB.getAll('photos')).map(p=>({...p,dataUrl:'[omitted]'}))};dl('terraventure_backup.json',JSON.stringify(data,null,2),'application/json');toast('Backup diunduh');}
+
+function importGPXFile(){$('gpx-input').click();}
+
+async function onImportGPX(e){
+  const f=e.target.files[0];if(!f)return;const text=await f.text();
+  try{const doc=new DOMParser().parseFromString(text,'application/xml');const trkpts=doc.querySelectorAll('trkpt');if(!trkpts.length){toast('Tidak ada track point');return;}
+    const pts=Array.from(trkpts).map(pt=>({lat:parseFloat(pt.getAttribute('lat')),lon:parseFloat(pt.getAttribute('lon')),alt:pt.querySelector('ele')?parseFloat(pt.querySelector('ele').textContent):null,t:pt.querySelector('time')?new Date(pt.querySelector('time').textContent).getTime():Date.now()}));
+    let distance=0;for(let i=1;i<pts.length;i++)distance+=haversine(pts[i-1].lat,pts[i-1].lon,pts[i].lat,pts[i].lon);
+    const name=doc.querySelector('trk name')?.textContent||f.name.replace('.gpx','');
+    await DB.add('tracks',{name:'Import: '+name,startedAt:new Date(pts[0].t).toISOString(),endedAt:new Date(pts[pts.length-1].t).toISOString(),points:pts,distance,elapsedSec:Math.round((pts[pts.length-1].t-pts[0].t)/1000)});
+    toast('GPX diimpor: '+pts.length+' titik');renderHistory();
+  }catch(err){console.error(err);toast('Gagal impor: '+err.message);}e.target.value='';
+}
+
+async function clearAll(){if(!confirm('Hapus SEMUA data?'))return;if(!confirm('Yakin?'))return;for(const s of ['tracks','trips','equipment','photos'])await DB.clear(s);toast('Semua data dihapus');showView('home');}
+
+async function init(){await DB.init();initMap();initCompass();if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});showView('home');setTimeout(()=>{if(!state.gpsBrowserWatchId&&!state.backgroundActive)startGps();},800);}
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
