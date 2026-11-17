@@ -282,7 +282,7 @@ function initCompass(){
 
 function initMap(){
   state.map=L.map('map',{zoomControl:true}).setView([-6.2,106.8],12);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(state.map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {attribution:'&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd', maxZoom: 20}).addTo(state.map);
   state.currentPolyline=L.polyline([],{color:'#2E7D32',weight:4}).addTo(state.map);
 }
 
