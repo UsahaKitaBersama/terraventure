@@ -1,0 +1,12 @@
+{
+  "appId": "com.terraventure.app",
+  "appName": "TERRAVENTURE",
+  "webDir": "www",
+  "server": { "androidScheme": "https" },
+  "plugins": {
+    "BackgroundGeolocation": {
+      "backgroundMessage": "TERRAVENTURE merekam perjalanan Anda",
+      "backgroundTitle": "GPS aktif"
+    }
+  }
+}
